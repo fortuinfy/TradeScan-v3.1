@@ -1,5 +1,5 @@
 // ========================= 
-// ACTIVE TRADE ENGINE 
+// ACTIVE TRADE ENGINE // TRADESCAN V3.1
 // ========================= 
 function manageActiveTrade(data) { 
     // Brought in 'quantity' to calculate the exit math
@@ -12,7 +12,7 @@ function manageActiveTrade(data) {
     let tradeHealth = "Healthy"; 
     const tradeReasons = []; 
     let partialExitPlan = null; // New container for dynamic exit data
-
+ 
     // ========================= 
     // CALCULATIONS
     // ========================= 
@@ -20,13 +20,13 @@ function manageActiveTrade(data) {
     const bullishTrend = ltp > ema20 && ema20 > ema50; 
     const distanceToTarget = ( ( currentTarget - ltp ) / ltp ) * 100; 
     const distanceFromEMA20 = ( ( ltp - ema20 ) / ema20 ) * 100;
-
+ 
     // ========================= 
     // WEAKNESS TRIGGERS
     // ========================= 
     const isStructuralBreakdown = distanceFromEMA20 <= -1.5 || ltp < ema50;
     const isMomentumDead = (advancedEnabled && (momentumScore < 40 || weaknessDetected)) || rsi < 45;
-
+ 
     // ========================= 
     // PRIORITY 1: HARD EXITS (STOP LOSS OR TARGET HIT)
     // ========================= 
@@ -52,7 +52,7 @@ function manageActiveTrade(data) {
         tradeReasons.push( "Confluence of structural breakdown and momentum failure. Aggressively reduce risk." ); 
         
         partialExitPlan = buildPartialExit(quantity, 0.75, "High Risk", ltp, executedEntry);
-
+ 
         if (currentSL < ema50 && ltp > ema50) {
             suggestedSL = parseFloat(ema50.toFixed(2));
             tradeReasons.push( "Suggested tightening Stop Loss to EMA50 for the remaining runner." );
@@ -80,7 +80,7 @@ function manageActiveTrade(data) {
         tradeReasons.push( "Singular failure in either structure or momentum. Consider balancing risk." ); 
         
         partialExitPlan = buildPartialExit(quantity, 0.50, "Medium Risk", ltp, executedEntry);
-
+ 
         if (currentSL < ema50 && ltp > ema50) {
             suggestedSL = parseFloat(ema50.toFixed(2));
             tradeReasons.push( "Suggested tightening Stop Loss to EMA50 for the remaining balance." );
@@ -115,15 +115,15 @@ function manageActiveTrade(data) {
             tradeReasons.push( "Trade is progressing normally within risk parameters. Hold position." ); 
         }
     } 
-
+ 
     // ========================= 
     // RETURN 
     // ========================= 
     return { tradeVerdict, priority, suggestedSL, suggestedTarget, tradeHealth, tradeReasons, pnlPercent, partialExitPlan }; 
 }
-
+ 
 // ========================= 
-// FRACTIONAL EXIT CALCULATOR 
+// FRACTIONAL EXIT CALCULATOR // TRADESCAN V3.1
 // ========================= 
 function buildPartialExit(totalQuantity, fraction, riskLabel, ltp, executedEntry) {
     // Math.round ensures we never suggest fractional shares (e.g., 99 * 0.75 = 74.25 -> 74)
