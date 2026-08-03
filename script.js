@@ -3,13 +3,29 @@
 // PHASE 1 INITIALIZATION 
 // ========================= 
 let currentMode = "new";
- 
+
+// ========================= 
+// DOM SAFE EXTRACTORS (CRASH PREVENTION)
+// ========================= 
+function safeGetValue(id, defaultVal = "") {
+    const el = document.getElementById(id);
+    return el ? el.value : defaultVal;
+}
+
+function safeGetNumber(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    const num = parseFloat(el.value);
+    return (isNaN(num) || !isFinite(num)) ? 0 : num;
+}
+
 // ========================= 
 // CLOCK 
 // ========================= 
 function updateDateTime() { 
     const now = new Date(); 
-   document.getElementById("dateTime").innerText = now.toLocaleString("en-IN");
+    const dtEl = document.getElementById("dateTime");
+    if (dtEl) dtEl.innerText = now.toLocaleString("en-IN");
 } 
 setInterval(updateDateTime, 1000); 
 updateDateTime(); 
@@ -22,8 +38,7 @@ modeButtons.forEach(btn => {
    btn.addEventListener("click", () => { 
        modeButtons.forEach(b => b.classList.remove("active-mode"));
        btn.classList.add("active-mode"); 
-        currentMode = btn.dataset.mode;
-        
+       currentMode = btn.dataset.mode;
        resetApplication(); 
     }); 
 });
@@ -37,31 +52,22 @@ function updateModeUI() {
     const watchlistSection = document.getElementById("watchlistSection"); 
     const activeTradeSection = document.getElementById("activeTradeSection"); 
     
-   watchlistSection.classList.add("hidden");
-   activeTradeSection.classList.add("hidden");
+    if (watchlistSection) watchlistSection.classList.add("hidden");
+    if (activeTradeSection) activeTradeSection.classList.add("hidden");
  
-    // ===================== 
-    // NEW SCAN 
-    // ===================== 
     if (currentMode === "new") { 
-       title.innerText = "New Scan";
-       description.innerText = "Scan a stock and evaluate whether it deserves watchlist consideration.";
+       if (title) title.innerText = "New Scan";
+       if (description) description.innerText = "Scan a stock and evaluate whether it deserves watchlist consideration.";
     } 
-    // ===================== 
-    // WATCHLIST 
-    // ===================== 
     if (currentMode === "watchlist") { 
-       title.innerText = "Watchlist Follow-Up";
-       description.innerText = "Monitor previously shortlisted opportunities.";
-       watchlistSection.classList.remove("hidden");
+       if (title) title.innerText = "Watchlist Follow-Up";
+       if (description) description.innerText = "Monitor previously shortlisted opportunities.";
+       if (watchlistSection) watchlistSection.classList.remove("hidden");
     } 
-    // ===================== 
-    // ACTIVE TRADE 
-    // ===================== 
     if (currentMode === "active") {
-       title.innerText = "Active Trade Follow-Up"; 
-       description.innerText = "Manage existing open positions."; 
-       activeTradeSection.classList.remove("hidden"); 
+       if (title) title.innerText = "Active Trade Follow-Up"; 
+       if (description) description.innerText = "Manage existing open positions."; 
+       if (activeTradeSection) activeTradeSection.classList.remove("hidden"); 
     } 
 } 
  
@@ -69,17 +75,21 @@ function updateModeUI() {
 // ADVANCED MOMENTUM (CLEAN SLATE MECHANIC)
 // ========================= 
 const advancedToggle = document.getElementById("advancedToggle");
-advancedToggle.addEventListener("change", () => { 
-   document.getElementById("momentumSection").classList.toggle("hidden", !advancedToggle.checked); 
-   buildMomentumInputs();
-}); 
+if (advancedToggle) {
+    advancedToggle.addEventListener("change", () => { 
+        const momSec = document.getElementById("momentumSection");
+        if (momSec) momSec.classList.toggle("hidden", !advancedToggle.checked); 
+        buildMomentumInputs();
+    }); 
+}
  
 // =========================
 // CANDLE INPUT BUILDER (UPDATED UI)
 // ========================= 
 function buildMomentumInputs() { 
     const container = document.getElementById("candlesContainer"); 
-   container.innerHTML = "";
+    if (!container) return;
+    container.innerHTML = "";
     
     for (let i = 1; i <= 5; i++) {
        container.innerHTML += `
@@ -121,28 +131,33 @@ function buildMomentumInputs() {
 // ========================= 
 // ANALYZE BUTTON EXECUTION 
 // ========================= 
-document.getElementById("analyzeBtn").addEventListener("click", runAnalysis); 
+const analyzeBtn = document.getElementById("analyzeBtn");
+if (analyzeBtn) analyzeBtn.addEventListener("click", runAnalysis); 
  
 function runAnalysis() { 
     // ========================= 
-    // GATHER CORE INPUTS 
+    // SAFE GATHER CORE INPUTS 
     // ========================= 
-    const stockName = document.getElementById("stockName").value.trim(); 
-    const timeframe = document.getElementById("timeframe").value; 
-    const ltp = safeNumber(document.getElementById("ltp").value);
-    const ema20 = safeNumber(document.getElementById("ema20").value); 
-    const ema50 = safeNumber(document.getElementById("ema50").value);
-    const rsi = safeNumber(document.getElementById("rsi").value); 
-    const advancedEnabled = document.getElementById("advancedToggle").checked;
+    const stockName = safeGetValue("stockName").trim(); 
+    const timeframe = safeGetValue("timeframe", "Daily"); 
+    const ltp = safeGetNumber("ltp");
+    const ema20 = safeGetNumber("ema20"); 
+    const ema50 = safeGetNumber("ema50");
+    const rsi = safeGetNumber("rsi"); 
+    
+    const advancedToggleEl = document.getElementById("advancedToggle");
+    const advancedEnabled = advancedToggleEl ? advancedToggleEl.checked : false;
     
     // ========================= 
     // BASIC VALIDATION 
     // ========================= 
-    const validation = validateBasicInputs({ stockName, ltp, ema20, ema50, rsi });
-    if (!validation.valid) { 
-       alert(validation.message); 
-        return; 
-    } 
+    if (typeof validateBasicInputs === "function") {
+        const validation = validateBasicInputs({ stockName, ltp, ema20, ema50, rsi });
+        if (!validation.valid) { 
+           alert(validation.message); 
+            return; 
+        } 
+    }
  
     // ========================= 
     // MOMENTUM DATA 
@@ -150,11 +165,13 @@ function runAnalysis() {
     let candles = []; 
     if (advancedEnabled) { 
         candles = collectCandles(); 
-        const candleValidation = validateCandleInputs(candles);
-        if (!candleValidation.valid) { 
-           alert(candleValidation.message); 
-            return; 
-        } 
+        if (typeof validateCandleInputs === "function") {
+            const candleValidation = validateCandleInputs(candles);
+            if (!candleValidation.valid) { 
+               alert(candleValidation.message); 
+                return; 
+            } 
+        }
     } 
  
     // ========================= 
@@ -172,14 +189,15 @@ function runAnalysis() {
     // WATCHLIST 
     // ===================== 
     else if (currentMode === "watchlist") { 
-        const previousSetupWatchlist = document.getElementById("previousSetupWatchlist").value;
-        const previousTriggerLow = safeNumber(document.getElementById("previousTriggerLow").value);
-        const previousTriggerHigh = safeNumber(document.getElementById("previousTriggerHigh").value);
-        const previousSL = safeNumber(document.getElementById("previousSL").value);
-        const previousTarget = safeNumber(document.getElementById("previousTarget").value);
+        // Graceful fallbacks for IDs that might differ in user's HTML
+        const previousSetupWatchlist = safeGetValue("previousSetupWatchlist", safeGetValue("previousSetup", "CB"));
+        const previousTriggerLow = safeGetNumber("previousTriggerLow");
+        const previousTriggerHigh = safeGetNumber("previousTriggerHigh");
+        const previousSL = safeGetNumber("previousSL");
+        const previousTarget = safeGetNumber("previousTarget"); // Might be 0 if missing in HTML
         
-        if (previousTriggerLow <= 0 || previousTriggerHigh <= 0 || previousSL <= 0 || previousTarget <= 0) { 
-           alert("Please enter all Watchlist Plan inputs (Trigger Zone, SL, and Target)."); 
+        if (previousTriggerLow <= 0 || previousTriggerHigh <= 0 || previousSL <= 0) { 
+           alert("Please enter all core Watchlist Plan inputs (Trigger Zone and SL)."); 
             return;
         } 
         
@@ -189,18 +207,19 @@ function runAnalysis() {
     // ACTIVE TRADE 
     // =====================
     else if (currentMode === "active") { 
-        const previousSetupActive = document.getElementById("previousSetupActive").value;
-        const executedEntry = safeNumber(document.getElementById("executedEntry").value);
-        const currentSL = safeNumber(document.getElementById("currentSL").value);
-        const currentTarget = safeNumber(document.getElementById("currentTarget").value);
-        const quantity = safeNumber(document.getElementById("quantity").value); 
+        const previousSetupActive = safeGetValue("previousSetupActive", safeGetValue("previousSetup", "CB"));
+        const executedEntry = safeGetNumber("executedEntry");
+        const currentSL = safeGetNumber("currentSL");
+        const currentTarget = safeGetNumber("currentTarget");
+        const quantity = safeGetNumber("quantity"); 
         
-        const activeValidation = validateActiveTradeInputs({ ltp, executedEntry, currentSL, currentTarget, quantity }); 
-        
-        if (!activeValidation.valid) { 
-           alert(activeValidation.message); 
-            return; 
-        } 
+        if (typeof validateActiveTradeInputs === "function") {
+            const activeValidation = validateActiveTradeInputs({ ltp, executedEntry, currentSL, currentTarget, quantity }); 
+            if (!activeValidation.valid) { 
+               alert(activeValidation.message); 
+                return; 
+            } 
+        }
         
         result = analyzeActiveTrade({ stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup: previousSetupActive, executedEntry, currentSL, currentTarget, quantity, advancedEnabled, candles });
     } 
@@ -213,11 +232,11 @@ function runAnalysis() {
        result.timeframe = timeframe;
        result.timestamp = new Date().toLocaleString("en-IN");
         
-        window.lastAnalysisResult = result;
+       window.lastAnalysisResult = result;
        renderResults(result); 
         
-        const screenshotContainer = document.getElementById('screenshotContainer');
-        if (screenshotContainer) screenshotContainer.classList.remove('hidden');
+       const screenshotContainer = document.getElementById('screenshotContainer');
+       if (screenshotContainer) screenshotContainer.classList.remove('hidden');
     }
 } 
  
@@ -227,16 +246,13 @@ function runAnalysis() {
 function collectCandles() { 
     const candles = []; 
     for (let i = 1; i <= 5; i++) {
-        // Extract the raw number and the multiplier dropdown
-        const volNum = document.getElementById(`volume${i}`).value.trim();
-        const volMulti = document.getElementById(`volumeMulti${i}`).value;
-        
-        // Stitch them together so the parser understands (e.g., "1.5" + "Cr" = "1.5Cr")
+        const volNum = safeGetValue(`volume${i}`).trim();
+        const volMulti = safeGetValue(`volumeMulti${i}`);
         const finalVolume = volNum ? volNum + volMulti : "";
  
         candles.push({
-            close: safeNumber(document.getElementById(`close${i}`).value), 
-            nature: document.getElementById(`nature${i}`).value, 
+            close: safeGetNumber(`close${i}`), 
+            nature: safeGetValue(`nature${i}`, "Neutral"), 
             volume: finalVolume 
         });
     } 
@@ -248,12 +264,11 @@ function collectCandles() {
 // ========================= 
 function renderResults(result) {
     const container = document.getElementById("resultsContainer");
-   container.innerHTML = "";
+    if (!container) return;
+    container.innerHTML = "";
  
-    // ========================= 
     // MASTER 0: ANALYSIS OVERVIEW
-    // ========================= 
-   container.innerHTML += `
+    container.innerHTML += `
     <div class="card">
         <div class="card-header"><h3>Analysis Overview</h3></div>
         <div class="sub-card-grid">
@@ -272,11 +287,8 @@ function renderResults(result) {
         </div>
     </div>`;
  
-    // ========================= 
-    // ACTIVE TRADE 
-    // ========================= 
+    // ACTIVE TRADE DISPLAY
     if (currentMode === "active") {
-        
        container.innerHTML += `
         <div class="card">
             <div class="card-header"><h3>Active Trade Verdict</h3></div>
@@ -336,9 +348,7 @@ function renderResults(result) {
            </div>`;
         }
  
-        // =========================
         // PARTIAL EXIT PLAN CARD
-        // =========================
         if (result.partialExitPlan) {
            container.innerHTML += `
             <div class="card" style="border-left: 4px solid #f59e0b;">
@@ -367,10 +377,7 @@ function renderResults(result) {
         return; 
     } 
  
-    // ========================= 
-    // NEW SCAN / WATCHLIST 
-    // ========================= 
-    
+    // NEW SCAN / WATCHLIST DISPLAY
    container.innerHTML += `
     <div class="card">
         <div class="card-header"><h3>Final Verdict</h3></div>
@@ -471,13 +478,12 @@ function renderResults(result) {
         </div>`;
     }
  
-    // =========================
     // DYNAMIC TRADE PLAN CARD
-    // =========================
     const tp = currentMode === "watchlist" ? result.lockedTradePlan : result.tradePlan;
     const cardTitle = currentMode === "watchlist" ? "Original Trade Plan" : "Trade Plan";
  
-    if (tp && result.verdict !== "AVOID" && result.verdict !== "REMOVE") {
+    // Ensure all critical trade plan pieces exist before rendering
+    if (tp && tp.triggerLow && result.verdict !== "AVOID" && result.verdict !== "REMOVE") {
        container.innerHTML += `
         <div class="card">
             <div class="card-header"><h3>${cardTitle}</h3></div>
@@ -492,7 +498,7 @@ function renderResults(result) {
                </div>
                <div class="sub-card">
                    <h4>Target</h4>
-                    <p>${tp.target}</p>
+                    <p>${tp.target || "N/A"}</p>
                </div>
            </div>
         </div>`;
@@ -507,9 +513,7 @@ function renderResults(result) {
 // ========================= 
 function renderReasons(reasons, badges) { 
     const container = document.getElementById("resultsContainer");
-    if (!reasons || reasons.length === 0) { 
-        return; 
-    } 
+    if (!container || !reasons || reasons.length === 0) return; 
     
     let html = `
     <div class="card reason-box">
@@ -538,35 +542,31 @@ function renderReasons(reasons, badges) {
 // =========================
 function handlePositionSizeVisibility(result) { 
     const card = document.getElementById("positionSizeCard");
+    if (!card) return;
+    
     let showCard = false;
+    if (currentMode === "new") showCard = (result.verdict === "BUY"); 
+    if (currentMode === "watchlist") showCard = (result.verdict === "READY");
     
-    if (currentMode === "new") { 
-        showCard = result.verdict === "BUY"; 
-    } 
-    if (currentMode === "watchlist") { 
-        showCard = result.verdict === "READY";
-    } 
-    
-    if (showCard) { 
-       card.classList.remove("hidden");
-    } else { 
-       card.classList.add("hidden");
-    } 
+    if (showCard) card.classList.remove("hidden");
+    else card.classList.add("hidden");
 } 
  
 function hidePositionSize() { 
-   document.getElementById("positionSizeCard").classList.add("hidden");
+   const card = document.getElementById("positionSizeCard");
+   if (card) card.classList.add("hidden");
 } 
  
 // ========================= 
 // POSITION SIZE BUTTON
 // ========================= 
-document.getElementById("calculatePositionBtn").addEventListener("click", calculatePosition);
+const calcPosBtn = document.getElementById("calculatePositionBtn");
+if (calcPosBtn) calcPosBtn.addEventListener("click", calculatePosition);
  
 function calculatePosition() { 
-    const capital = safeNumber(document.getElementById("capitalInput").value); 
-    const riskPercent = safeNumber(document.getElementById("riskPercentInput").value); 
-    const entryPrice = safeNumber(document.getElementById("entryPriceInput").value);
+    const capital = safeGetNumber("capitalInput"); 
+    const riskPercent = safeGetNumber("riskPercentInput"); 
+    const entryPrice = safeGetNumber("entryPriceInput");
     
     const triggerHighElement = document.querySelector("#resultsContainer"); 
     if (!triggerHighElement) return;
@@ -591,14 +591,12 @@ function calculatePosition() {
         return;
     }
     
-    const positionResult = calculatePositionSize({ 
-        capital, 
-        riskPercent, 
-        entryPrice: entryPrice, 
-        stopLoss: stopLoss 
-    }); 
-    
-   renderPositionResult(positionResult);
+    if (typeof calculatePositionSize === "function") {
+        const positionResult = calculatePositionSize({ 
+            capital, riskPercent, entryPrice, stopLoss 
+        }); 
+        renderPositionResult(positionResult);
+    }
 } 
  
 // ========================= 
@@ -606,6 +604,8 @@ function calculatePosition() {
 // ========================= 
 function renderPositionResult(result) { 
     const container = document.getElementById("positionResult"); 
+    if (!container) return;
+    
    container.innerHTML = `
     <div class="sub-card-grid" style="margin-top: 24px;">
         <div class="sub-card">
@@ -627,34 +627,36 @@ function renderPositionResult(result) {
 // ========================= 
 // APP RESET 
 // =========================
-document.getElementById("resetBtn").addEventListener("click", resetApplication); 
+const resetBtn = document.getElementById("resetBtn");
+if (resetBtn) resetBtn.addEventListener("click", resetApplication); 
  
 function resetApplication() { 
    document.querySelectorAll("input").forEach(input => { 
-        if (input.type === "checkbox") { 
-           input.checked = false; 
-        } else { 
-           input.value = ""; 
-        } 
+        if (input.type === "checkbox") input.checked = false; 
+        else input.value = ""; 
     });
     
    document.querySelectorAll("select").forEach(select => { 
        select.selectedIndex = 0; 
     }); 
     
-   document.getElementById("resultsContainer").innerHTML = ""; 
-   document.getElementById("positionResult").innerHTML = ""; 
+   const resContainer = document.getElementById("resultsContainer");
+   if (resContainer) resContainer.innerHTML = ""; 
+   
+   const posResult = document.getElementById("positionResult");
+   if (posResult) posResult.innerHTML = ""; 
+   
     hidePositionSize();
     
-   document.getElementById("momentumSection").classList.add("hidden");
+   const momSec = document.getElementById("momentumSection");
+   if (momSec) momSec.classList.add("hidden");
+   
    buildMomentumInputs(); 
-    updateModeUI(); 
+   updateModeUI(); 
    window.lastAnalysisResult = null;
  
     const screenshotContainer = document.getElementById('screenshotContainer');
-    if (screenshotContainer) {
-       screenshotContainer.classList.add('hidden');
-    }
+    if (screenshotContainer) screenshotContainer.classList.add('hidden');
 } 
  
 // ========================= 
