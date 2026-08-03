@@ -7,16 +7,26 @@ let currentMode = "new";
 // ========================= 
 // DOM SAFE EXTRACTORS (CRASH PREVENTION)
 // ========================= 
-function safeGetValue(id, defaultVal = "") {
-    const el = document.getElementById(id);
-    return el ? el.value : defaultVal;
+// Checks an array of possible IDs so the app never crashes if the HTML is slightly different
+function safeGetValue(ids, defaultVal = "") {
+    if (!Array.isArray(ids)) ids = [ids];
+    for (let id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.value !== undefined && el.value !== "") return el.value;
+    }
+    return defaultVal;
 }
 
-function safeGetNumber(id) {
-    const el = document.getElementById(id);
-    if (!el) return 0;
-    const num = parseFloat(el.value);
-    return (isNaN(num) || !isFinite(num)) ? 0 : num;
+function safeGetNumber(ids) {
+    if (!Array.isArray(ids)) ids = [ids];
+    for (let id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.value !== "") {
+            const num = parseFloat(el.value);
+            if (!isNaN(num) && isFinite(num)) return num;
+        }
+    }
+    return 0;
 }
 
 // ========================= 
@@ -135,108 +145,115 @@ const analyzeBtn = document.getElementById("analyzeBtn");
 if (analyzeBtn) analyzeBtn.addEventListener("click", runAnalysis); 
  
 function runAnalysis() { 
-    // ========================= 
-    // SAFE GATHER CORE INPUTS 
-    // ========================= 
-    const stockName = safeGetValue("stockName").trim(); 
-    const timeframe = safeGetValue("timeframe", "Daily"); 
-    const ltp = safeGetNumber("ltp");
-    const ema20 = safeGetNumber("ema20"); 
-    const ema50 = safeGetNumber("ema50");
-    const rsi = safeGetNumber("rsi"); 
-    
-    const advancedToggleEl = document.getElementById("advancedToggle");
-    const advancedEnabled = advancedToggleEl ? advancedToggleEl.checked : false;
-    
-    // ========================= 
-    // BASIC VALIDATION 
-    // ========================= 
-    if (typeof validateBasicInputs === "function") {
-        const validation = validateBasicInputs({ stockName, ltp, ema20, ema50, rsi });
-        if (!validation.valid) { 
-           alert(validation.message); 
-            return; 
-        } 
-    }
- 
-    // ========================= 
-    // MOMENTUM DATA 
-    // =========================
-    let candles = []; 
-    if (advancedEnabled) { 
-        candles = collectCandles(); 
-        if (typeof validateCandleInputs === "function") {
-            const candleValidation = validateCandleInputs(candles);
-            if (!candleValidation.valid) { 
-               alert(candleValidation.message); 
+    try {
+        // ========================= 
+        // SAFE GATHER CORE INPUTS 
+        // ========================= 
+        const stockName = safeGetValue("stockName").trim(); 
+        const timeframe = safeGetValue("timeframe", "Daily"); 
+        const ltp = safeGetNumber("ltp");
+        const ema20 = safeGetNumber("ema20"); 
+        const ema50 = safeGetNumber("ema50");
+        const rsi = safeGetNumber("rsi"); 
+        
+        const advancedToggleEl = document.getElementById("advancedToggle");
+        const advancedEnabled = advancedToggleEl ? advancedToggleEl.checked : false;
+        
+        // ========================= 
+        // BASIC VALIDATION 
+        // ========================= 
+        if (typeof validateBasicInputs === "function") {
+            const validation = validateBasicInputs({ stockName, ltp, ema20, ema50, rsi });
+            if (!validation.valid) { 
+               alert(validation.message); 
                 return; 
             } 
         }
-    } 
- 
-    // ========================= 
-    // ROUTING 
-    // ========================= 
-    let result = null;
- 
-    // ===================== 
-    // NEW SCAN 
-    // ===================== 
-    if (currentMode === "new") { 
-        result = analyzeNewScanMode({ stockName, timeframe, ltp, ema20, ema50, rsi, advancedEnabled, candles }); 
-    } 
-    // ===================== 
-    // WATCHLIST 
-    // ===================== 
-    else if (currentMode === "watchlist") { 
-        // Graceful fallbacks for IDs that might differ in user's HTML
-        const previousSetupWatchlist = safeGetValue("previousSetupWatchlist", safeGetValue("previousSetup", "CB"));
-        const previousTriggerLow = safeGetNumber("previousTriggerLow");
-        const previousTriggerHigh = safeGetNumber("previousTriggerHigh");
-        const previousSL = safeGetNumber("previousSL");
-        const previousTarget = safeGetNumber("previousTarget"); // Might be 0 if missing in HTML
-        
-        if (previousTriggerLow <= 0 || previousTriggerHigh <= 0 || previousSL <= 0) { 
-           alert("Please enter all core Watchlist Plan inputs (Trigger Zone and SL)."); 
-            return;
+     
+        // ========================= 
+        // MOMENTUM DATA 
+        // =========================
+        let candles = []; 
+        if (advancedEnabled) { 
+            candles = collectCandles(); 
+            if (typeof validateCandleInputs === "function") {
+                const candleValidation = validateCandleInputs(candles);
+                if (!candleValidation.valid) { 
+                   alert(candleValidation.message); 
+                    return; 
+                } 
+            }
         } 
-        
-        result = analyzeWatchlistMode({ stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup: previousSetupWatchlist, previousTriggerLow, previousTriggerHigh, previousSL, previousTarget, advancedEnabled, candles }); 
-    } 
-    // ===================== 
-    // ACTIVE TRADE 
-    // =====================
-    else if (currentMode === "active") { 
-        const previousSetupActive = safeGetValue("previousSetupActive", safeGetValue("previousSetup", "CB"));
-        const executedEntry = safeGetNumber("executedEntry");
-        const currentSL = safeGetNumber("currentSL");
-        const currentTarget = safeGetNumber("currentTarget");
-        const quantity = safeGetNumber("quantity"); 
-        
-        if (typeof validateActiveTradeInputs === "function") {
-            const activeValidation = validateActiveTradeInputs({ ltp, executedEntry, currentSL, currentTarget, quantity }); 
-            if (!activeValidation.valid) { 
-               alert(activeValidation.message); 
-                return; 
+     
+        // ========================= 
+        // ROUTING 
+        // ========================= 
+        let result = null;
+     
+        // ===================== 
+        // NEW SCAN 
+        // ===================== 
+        if (currentMode === "new") { 
+            result = analyzeNewScanMode({ stockName, timeframe, ltp, ema20, ema50, rsi, advancedEnabled, candles }); 
+        } 
+        // ===================== 
+        // WATCHLIST 
+        // ===================== 
+        else if (currentMode === "watchlist") { 
+            // Graceful fallbacks checking multiple ID possibilities
+            const previousSetupWatchlist = safeGetValue(["previousSetupWatchlist", "previousSetup", "setupWatchlist"], "CB");
+            const previousTriggerLow = safeGetNumber(["previousTriggerLow", "triggerLow", "wlTriggerLow"]);
+            const previousTriggerHigh = safeGetNumber(["previousTriggerHigh", "triggerHigh", "wlTriggerHigh"]);
+            const previousSL = safeGetNumber(["previousSL", "stopLoss", "wlStopLoss"]);
+            const previousTarget = safeGetNumber(["previousTarget", "target", "wlTarget"]);
+            
+            if (previousTriggerLow <= 0 || previousTriggerHigh <= 0 || previousSL <= 0) { 
+               alert("Please enter all core Watchlist Plan inputs (Trigger Zone and SL)."); 
+                return;
             } 
+            
+            result = analyzeWatchlistMode({ stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup: previousSetupWatchlist, previousTriggerLow, previousTriggerHigh, previousSL, previousTarget, advancedEnabled, candles }); 
+        } 
+        // ===================== 
+        // ACTIVE TRADE 
+        // =====================
+        else if (currentMode === "active") { 
+            const previousSetupActive = safeGetValue(["previousSetupActive", "previousSetup", "activeSetup"], "CB");
+            const executedEntry = safeGetNumber(["executedEntry", "entryPrice"]);
+            const currentSL = safeGetNumber(["currentSL", "activeSL"]);
+            const currentTarget = safeGetNumber(["currentTarget", "activeTarget"]);
+            const quantity = safeGetNumber(["quantity", "positionSize", "tradeQuantity"]); 
+            
+            if (typeof validateActiveTradeInputs === "function") {
+                const activeValidation = validateActiveTradeInputs({ ltp, executedEntry, currentSL, currentTarget, quantity }); 
+                if (!activeValidation.valid) { 
+                   alert(activeValidation.message); 
+                    return; 
+                } 
+            }
+            
+            result = analyzeActiveTrade({ stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup: previousSetupActive, executedEntry, currentSL, currentTarget, quantity, advancedEnabled, candles });
+        } 
+     
+        // ========================= 
+        // DISPLAY 
+        // ========================= 
+        if (result) {
+           result.stockName = stockName !== "" ? stockName : "Unknown Asset";
+           result.timeframe = timeframe;
+           result.timestamp = new Date().toLocaleString("en-IN");
+            
+           window.lastAnalysisResult = result;
+           renderResults(result); 
+            
+           const screenshotContainer = document.getElementById('screenshotContainer');
+           if (screenshotContainer) screenshotContainer.classList.remove('hidden');
         }
-        
-        result = analyzeActiveTrade({ stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup: previousSetupActive, executedEntry, currentSL, currentTarget, quantity, advancedEnabled, candles });
-    } 
- 
-    // ========================= 
-    // DISPLAY 
-    // ========================= 
-    if (result) {
-       result.stockName = stockName !== "" ? stockName : "Unknown Asset";
-       result.timeframe = timeframe;
-       result.timestamp = new Date().toLocaleString("en-IN");
-        
-       window.lastAnalysisResult = result;
-       renderResults(result); 
-        
-       const screenshotContainer = document.getElementById('screenshotContainer');
-       if (screenshotContainer) screenshotContainer.classList.remove('hidden');
+
+    } catch (error) {
+        // This will pop up an alert box to show us exactly what failed instead of failing silently!
+        alert("Engine Error: " + error.message + "\nPlease check the browser console for details.");
+        console.error("TradeScan AI Execution Error: ", error);
     }
 } 
  
