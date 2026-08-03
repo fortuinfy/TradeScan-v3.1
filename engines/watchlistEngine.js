@@ -1,5 +1,5 @@
 // ========================= 
-// WATCHLIST ENGINE // 
+// WATCHLIST ENGINE // TRADESCAN V3.1
 // ========================= 
 function analyzeWatchlist(data) { 
     const { timeframe, setup, setupScore, momentumScore = 0, weaknessDetected = false, ltp, ema20, ema50, rsi, previousTriggerLow, previousTriggerHigh, previousSL, advancedEnabled = false } = data; 
@@ -50,7 +50,7 @@ function analyzeWatchlist(data) {
     // READY 
     // ========================= 
     // Requires strong intraday setup and momentum confirmation
-    else if ( timeframe === "15 Min" && aboveTriggerZone && strongTrend && setupScore >= 80 && healthyRSI && (!advancedEnabled || (momentumScore >= 60 && !weaknessDetected)) ) { 
+    else if ( timeframe === "15 Min" && aboveTriggerZone && strongTrend && setupScore >= 80 && healthyRSI && (!advancedEnabled || (momentumScore >= 60 && !weaknessDetected)) ) {
         verdict = "READY"; 
         confidence = setupScore >= 90 ? 90 : 85; 
         setupGrade = setupScore >= 90 ? "A+" : "A"; 
