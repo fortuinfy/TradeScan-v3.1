@@ -1,5 +1,5 @@
 // ========================= 
-// SETUP ENGINE 
+// SETUP ENGINE // TRADESCAN V3.1
 // ========================= 
 function calculateSetupScores(data) { 
     // BUG FIX: Brought in lockedSetup
