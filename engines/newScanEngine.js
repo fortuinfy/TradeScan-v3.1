@@ -1,5 +1,5 @@
 // ========================= 
-// NEW SCAN ENGINE // 
+// NEW SCAN ENGINE // TRADESCAN V3.1
 // ========================= 
 function analyzeNewScan(data) { 
     const { timeframe, setup, setupScore, momentumScore = 0, weaknessDetected = false, ltp, ema20, ema50, rsi, advancedEnabled = false } = data; 
