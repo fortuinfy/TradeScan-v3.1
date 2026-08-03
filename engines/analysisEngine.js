@@ -1,7 +1,7 @@
 // ========================= 
-// ANALYSIS ENGINE // V2 MASTER ROUTER 
+// ANALYSIS ENGINE // V2 MASTER ROUTER // TRADESCAN V3.1
 // ========================= 
-
+ 
 // ========================= 
 // NEW SCAN 
 // ========================= 
@@ -28,7 +28,7 @@ function analyzeNewScanMode(data) {
     
     return { stockName, mode: "new", timeframe, ...verdictResult, setup: setupResult.setup, setupScore: setupResult.setupScore, cbScore: setupResult.cbPercent, pcScore: setupResult.pcPercent, momentumScore: momentumResult.momentumScore, momentumTrend: momentumResult.momentumTrend, participationTrend: momentumResult.participationTrend, tradePlan, reasons }; 
 } 
-
+ 
 // ========================= 
 // WATCHLIST 
 // ========================= 
@@ -56,14 +56,14 @@ function analyzeWatchlistMode(data) {
     
     return { stockName, mode: "watchlist", timeframe, ...verdictResult, setup: setupResult.setup, setupScore: setupResult.setupScore, cbScore: setupResult.cbPercent, pcScore: setupResult.pcPercent, readinessScore: momentumResult.readinessScore, triggerPressure: momentumResult.triggerPressure, volumeExpansion: momentumResult.volumeExpansion, lockedTradePlan, reasons }; 
 } 
-
+ 
 // ========================= 
 // ACTIVE TRADE 
 // ========================= 
 function analyzeActiveTrade(data) { 
     // BUG FIX: Extract previousSetup for reason generation
     const { previousSetup } = data;
-
+ 
     let momentumResult = { tradeMomentumScore: 0, momentumHealth: "Not Available", participationTrend: "Not Available", weaknessDetected: false, exhaustionDetected: false }; 
     
     if ( data.advancedEnabled && data.candles && data.candles.length >= 5 ) { 
