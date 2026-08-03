@@ -1,5 +1,5 @@
 // ========================= 
-// VOLUME PARSER 
+// VOLUME PARSER // TRADESCAN V3.1
 // ========================= 
 function parseVolume(volumeInput) { 
     if ( volumeInput === undefined || volumeInput === null ) { 
