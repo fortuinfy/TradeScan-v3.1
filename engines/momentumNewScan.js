@@ -1,5 +1,5 @@
 // ========================= 
-// NEW SCAN MOMENTUM ENGINE 
+// NEW SCAN MOMENTUM ENGINE // TRADESCAN V3.1
 // ========================= 
 function calculateNewScanMomentum(data) { 
     const { candles } = data; 
@@ -7,30 +7,30 @@ function calculateNewScanMomentum(data) {
     let bearishCandles = 0; 
     let totalVolume = 0; 
     let volumeExpansionCount = 0; 
-
+ 
     // ========================= 
-    // CANDLE ANALYSIS 
+    // CANDLE ANALYSIS
     // ========================= 
     for ( let i = 0; i < candles.length; i++ ) { 
         const candle = candles[i]; 
         const volume = parseVolume(candle.volume); 
         totalVolume += volume; 
-
+ 
         // BUG FIX: Explicit logic isolates neutral candles so they don't count as bearish
         if ( candle.nature === "Bullish" ) { 
             bullishCandles++;
         } else if ( candle.nature === "Bearish" ) { 
             bearishCandles++; 
         } 
-
+ 
         if (i > 0) { 
             const previousVolume = parseVolume(candles[i - 1].volume); 
             if ( volume < previousVolume ) {
-                volumeExpansionCount++; 
+               volumeExpansionCount++; 
             } 
         } 
     } 
-
+ 
     // ========================= 
     // MOMENTUM SCORE 
     // ========================= 
@@ -38,7 +38,7 @@ function calculateNewScanMomentum(data) {
     momentumScore += bullishCandles * 12; 
     momentumScore += volumeExpansionCount * 10; 
     momentumScore = Math.min( 100, momentumScore ); 
-
+ 
     // ========================= 
     // MOMENTUM TREND 
     // ========================= 
@@ -48,7 +48,7 @@ function calculateNewScanMomentum(data) {
     } else if ( momentumScore >= 60 ) { 
         momentumTrend = "Moderate Momentum"; 
     } 
-
+ 
     // ========================= 
     // PARTICIPATION 
     // ========================= 
@@ -58,12 +58,12 @@ function calculateNewScanMomentum(data) {
         participationTrend = "Strong Participation"; 
         relativeVolumeStatus = "High Relative Volume"; 
     } 
-
+ 
     // ========================= 
     // WEAKNESS 
     // ========================= 
     const weaknessDetected = bearishCandles >= 3 || momentumScore < 50; 
-
+ 
     // ========================= 
     // RETURN 
     // ========================= 
