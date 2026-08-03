@@ -7,7 +7,6 @@ let currentMode = "new";
 // ========================= 
 // DOM SAFE EXTRACTORS (CRASH PREVENTION)
 // ========================= 
-// Checks an array of possible IDs so the app never crashes if the HTML is slightly different
 function safeGetValue(ids, defaultVal = "") {
     if (!Array.isArray(ids)) ids = [ids];
     for (let id of ids) {
@@ -200,17 +199,25 @@ function runAnalysis() {
         // WATCHLIST 
         // ===================== 
         else if (currentMode === "watchlist") { 
-            // Graceful fallbacks checking multiple ID possibilities
             const previousSetupWatchlist = safeGetValue(["previousSetupWatchlist", "previousSetup", "setupWatchlist"], "CB");
             const previousTriggerLow = safeGetNumber(["previousTriggerLow", "triggerLow", "wlTriggerLow"]);
             const previousTriggerHigh = safeGetNumber(["previousTriggerHigh", "triggerHigh", "wlTriggerHigh"]);
             const previousSL = safeGetNumber(["previousSL", "stopLoss", "wlStopLoss"]);
             const previousTarget = safeGetNumber(["previousTarget", "target", "wlTarget"]);
             
-            if (previousTriggerLow <= 0 || previousTriggerHigh <= 0 || previousSL <= 0) { 
-               alert("Please enter all core Watchlist Plan inputs (Trigger Zone and SL)."); 
-                return;
-            } 
+            // EXPLICIT CHECK added to bypass missing file errors
+            if (typeof validateWatchlistInputs === "function") {
+                const wlVal = validateWatchlistInputs({ previousTriggerLow, previousTriggerHigh, previousSL, previousTarget });
+                if (!wlVal.valid) {
+                    alert(wlVal.message);
+                    return;
+                }
+            } else {
+                if (previousTriggerLow <= 0 || previousTriggerHigh <= 0 || previousSL <= 0 || previousTarget <= 0) {
+                    alert("Please enter all Watchlist Plan inputs (Trigger Zone, SL, and Target).");
+                    return;
+                }
+            }
             
             result = analyzeWatchlistMode({ stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup: previousSetupWatchlist, previousTriggerLow, previousTriggerHigh, previousSL, previousTarget, advancedEnabled, candles }); 
         } 
@@ -230,6 +237,11 @@ function runAnalysis() {
                    alert(activeValidation.message); 
                     return; 
                 } 
+            } else {
+                if (executedEntry <= 0 || currentSL <= 0 || currentTarget <= 0) {
+                    alert("Please complete all active trade inputs.");
+                    return;
+                }
             }
             
             result = analyzeActiveTrade({ stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup: previousSetupActive, executedEntry, currentSL, currentTarget, quantity, advancedEnabled, candles });
@@ -251,8 +263,7 @@ function runAnalysis() {
         }
 
     } catch (error) {
-        // This will pop up an alert box to show us exactly what failed instead of failing silently!
-        alert("Engine Error: " + error.message + "\nPlease check the browser console for details.");
+        alert("Engine Error: " + error.message + "\n\nThis usually happens if an old script line is left over or a file isn't linked correctly. (But we caught it safely!)");
         console.error("TradeScan AI Execution Error: ", error);
     }
 } 
