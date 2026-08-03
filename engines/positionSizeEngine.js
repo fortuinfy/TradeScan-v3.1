@@ -1,152 +1,64 @@
 // =========================
-// POSITION SIZE ENGINE
+// POSITION SIZE ENGINE // TRADESCAN V3.1
 // =========================
-
 function calculatePositionSize(data) {
+  const { capital, riskPercent, entryPrice, stopLoss } = data;
 
-  const {
-
-    capital,
-
-    riskPercent,
-
-    entryPrice,
-
-    stopLoss
-
-  } = data;
-
-  if (
-
-    !capital ||
-    !riskPercent ||
-    !entryPrice ||
-    !stopLoss
-
-  ) {
-
+  if (!capital || !riskPercent || !entryPrice || !stopLoss) {
     return {
-
       quantity: 0,
-
       riskAmount: 0,
-
       positionValue: 0,
-
       perShareRisk: 0,
-
-      warning:
-        "Incomplete Inputs"
-
+      warning: "Incomplete Inputs"
     };
-
   }
 
   // =========================
   // RISK AMOUNT
   // =========================
-
-  const riskAmount =
-
-    (
-      capital *
-      riskPercent
-    ) / 100;
+  const riskAmount = (capital * riskPercent) / 100;
 
   // =========================
   // PER SHARE RISK
   // =========================
+  const perShareRisk = Math.abs(entryPrice - stopLoss);
 
-  const perShareRisk =
-
-    Math.abs(
-      entryPrice -
-      stopLoss
-    );
-
-  if (
-
-    perShareRisk <= 0
-
-  ) {
-
+  if (perShareRisk <= 0) {
     return {
-
       quantity: 0,
-
       riskAmount,
-
       positionValue: 0,
-
       perShareRisk,
-
-      warning:
-        "Invalid Stop Loss"
-
+      warning: "Invalid Stop Loss"
     };
-
   }
 
   // =========================
   // QUANTITY
   // =========================
-
-  let quantity =
-
-    Math.floor(
-      riskAmount /
-      perShareRisk
-    );
+  let quantity = Math.floor(riskAmount / perShareRisk);
 
   // =========================
   // CAPITAL CHECK
   // =========================
+  const maxQuantity = Math.floor(capital / entryPrice);
 
-  const maxQuantity =
-
-    Math.floor(
-      capital /
-      entryPrice
-    );
-
-  if (
-
-    quantity > maxQuantity
-
-  ) {
-
-    quantity =
-      maxQuantity;
-
+  if (quantity > maxQuantity) {
+    quantity = maxQuantity;
   }
 
   // =========================
   // POSITION VALUE
   // =========================
-
-  const positionValue =
-
-    quantity *
-    entryPrice;
+  const positionValue = quantity * entryPrice;
 
   return {
-
     quantity,
-
-    riskAmount:
-      riskAmount.toFixed(2),
-
-    positionValue:
-      positionValue.toFixed(2),
-
-    perShareRisk:
-      perShareRisk.toFixed(2),
-
+    riskAmount: riskAmount.toFixed(2),
+    positionValue: positionValue.toFixed(2),
+    perShareRisk: perShareRisk.toFixed(2),
     warning: "",
-
-    message:
-      "Position Size Calculated"
-
+    message: "Position Size Calculated"
   };
-
 }
