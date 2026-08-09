@@ -113,4 +113,45 @@ function generateWatchlistReasons(data) {
   // =========================
   // ADVANCED MOMENTUM
   // =========================
-  if
+  if (advancedEnabled) {
+    reasons.push(
+      "Watchlist momentum analysis included."
+    );
+    reasons.push(
+      "Readiness Score: " + readinessScore
+    );
+    reasons.push(
+      "Trigger Pressure: " + triggerPressure
+    );
+    reasons.push(
+      "Volume Expansion: " + volumeExpansion
+    );
+
+    if (weaknessDetected) {
+      reasons.push(
+        "Weakness detected in execution readiness."
+      );
+    }
+  }
+
+  // =========================
+  // FINAL VERDICT
+  // =========================
+  if (verdict === "READY") {
+    reasons.push(
+      "Conditions support execution readiness."
+    );
+  }
+  if (verdict === "MONITOR") {
+    reasons.push(
+      "Stock remains valid but requires further confirmation."
+    );
+  }
+  if (verdict === "REMOVE") {
+    reasons.push(
+      "Current conditions no longer justify keeping this stock on the watchlist."
+    );
+  }
+
+  return reasons;
+}
