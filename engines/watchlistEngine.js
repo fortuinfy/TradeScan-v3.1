@@ -21,6 +21,7 @@ function analyzeWatchlist(data) {
     let setupGrade = "B"; 
     let riskLevel = "MEDIUM"; 
     let workflowAction = "Continue Watchlist"; 
+    let requiresNewPlan = false; // NEW FLAG: Tells the Master Router to generate a new plan
     const badges = []; 
     
     // ========================= 
@@ -35,9 +36,8 @@ function analyzeWatchlist(data) {
     // ========================= 
     // REMOVE 
     // ========================= 
-    // BUG FIX: Differentiate between Daily structural breakdown vs 15-min intraday consolidation.
-    // Intraday weakness will now fall back to "MONITOR" rather than forcing a "REMOVE".
-    const isDailyBreakdown = timeframe === "Daily" && (ltp < ema20 || ema20 < ema50 || rsi < 45 || (advancedEnabled && weaknessDetected) || (advancedEnabled && momentumScore < 50));
+    // Intraday weakness will fall back to "MONITOR" rather than forcing a "REMOVE".
+    const isDailyBreakdown = timeframe === "Daily" && (ltp < ema20 || ema20 < ema50 || rsi < 45 || (advancedEnabled && weaknessDetected) || (advancedEnabled && momentumScore < 50)); 
     
     if ( belowStopLoss || setupScore < 50 || isDailyBreakdown ) { 
         verdict = "REMOVE"; 
@@ -47,10 +47,23 @@ function analyzeWatchlist(data) {
         workflowAction = "Remove From Watchlist"; 
     } 
     // ========================= 
-    // READY 
+    // READY (NEW ENTRY / RUNAWAY) 
     // ========================= 
-    // Requires strong intraday setup and momentum confirmation
-    else if ( timeframe === "15 Min" && aboveTriggerZone && strongTrend && setupScore >= 80 && healthyRSI && (!advancedEnabled || (momentumScore >= 60 && !weaknessDetected)) ) {
+    // Price has crossed the old zone, but the setup is STILL highly valid on the new price.
+    else if ( timeframe === "15 Min" && aboveTriggerZone && strongTrend && setupScore >= 80 && healthyRSI && (!advancedEnabled || (momentumScore >= 60 && !weaknessDetected)) ) { 
+        verdict = "READY"; 
+        confidence = setupScore >= 90 ? 90 : 85; 
+        setupGrade = setupScore >= 90 ? "A+" : "A"; 
+        riskLevel = "LOW"; 
+        workflowAction = "New Entry Calculated"; 
+        requiresNewPlan = true; // Triggers the recalculation
+        badges.push("New Base Formed");
+    } 
+    // ========================= 
+    // READY (ORIGINAL ENTRY ZONE) 
+    // ========================= 
+    // Price is safely inside the original trigger zone.
+    else if ( timeframe === "15 Min" && insideTriggerZone && strongTrend && setupScore >= 80 && healthyRSI && (!advancedEnabled || (momentumScore >= 60 && !weaknessDetected)) ) { 
         verdict = "READY"; 
         confidence = setupScore >= 90 ? 90 : 85; 
         setupGrade = setupScore >= 90 ? "A+" : "A"; 
@@ -60,7 +73,7 @@ function analyzeWatchlist(data) {
     // ========================= 
     // MONITOR 
     // ========================= 
-    // Catches intraday pullbacks and consolidations until they trigger
+    // Catches intraday pullbacks, consolidations, or prices below the trigger low
     else { 
         verdict = "MONITOR"; 
         confidence = setupScore >= 70 ? 70 : 60; 
@@ -77,5 +90,5 @@ function analyzeWatchlist(data) {
         badges.push( "High Conviction" ); 
     } 
     
-    return { verdict, confidence, setupGrade, riskLevel, workflowAction, badges }; 
+    return { verdict, confidence, setupGrade, riskLevel, workflowAction, requiresNewPlan, badges }; 
 }
