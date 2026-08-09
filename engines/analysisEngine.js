@@ -1,94 +1,87 @@
-// ========================= 
-// WATCHLIST ENGINE // TRADESCAN V3.1
-// ========================= 
-function analyzeWatchlist(data) { 
-    const { timeframe, setup, setupScore, momentumScore = 0, weaknessDetected = false, ltp, ema20, ema50, rsi, previousTriggerLow, previousTriggerHigh, previousSL, advancedEnabled = false } = data; 
+// =========================
+// ANALYSIS ENGINE // V2 MASTER ROUTER // TRADESCAN V3.1
+// =========================
+
+// =========================
+// NEW SCAN
+// =========================
+function analyzeNewScanMode(data) {
+    const { stockName, timeframe, ltp, ema20, ema50, rsi, advancedEnabled = false, candles = [] } = data;
     
-    // ========================= 
-    // CONDITIONS 
-    // ========================= 
-    const strongTrend = ltp > ema20 && ema20 > ema50; 
-    const healthyRSI = rsi >= 55 && rsi <= 75; 
-    const insideTriggerZone = ltp >= previousTriggerLow && ltp <= previousTriggerHigh; 
-    const aboveTriggerZone = ltp > previousTriggerHigh; 
-    const belowStopLoss = ltp < previousSL; 
+    // SETUP
+    const setupResult = calculateSetupScores({ ltp, ema20, ema50, rsi, timeframe });
     
-    // ========================= 
-    // DEFAULTS 
-    // ========================= 
-    let verdict = "MONITOR"; 
-    let confidence = 65; 
-    let setupGrade = "B"; 
-    let riskLevel = "MEDIUM"; 
-    let workflowAction = "Continue Watchlist"; 
-    let requiresNewPlan = false; // NEW FLAG: Tells the Master Router to generate a new plan
-    const badges = []; 
+    // MOMENTUM
+    let momentumResult = { momentumScore: 0, momentumTrend: "Not Available", participationTrend: "Not Available", relativeVolumeStatus: "Not Available", weaknessDetected: false };
+    if ( advancedEnabled && candles.length >= 5 ) {
+        momentumResult = calculateNewScanMomentum({ candles });
+    }
     
-    // ========================= 
-    // BADGES 
-    // ========================= 
-    if (strongTrend) { badges.push( "Strong Trend" ); } 
-    if (healthyRSI) { badges.push( "Healthy RSI" ); } 
-    if (insideTriggerZone) { badges.push( "Near Trigger Zone" ); } 
-    if (aboveTriggerZone) { badges.push( "Trigger Breakout" ); } 
-    if ( advancedEnabled && momentumScore >= 80 ) { badges.push( "Momentum Expansion" ); } 
+    // VERDICT
+    const verdictResult = analyzeNewScan({ timeframe, setup: setupResult.setup, setupScore: setupResult.setupScore, momentumScore: momentumResult.momentumScore, weaknessDetected: momentumResult.weaknessDetected, ltp, ema20, ema50, rsi, advancedEnabled });
     
-    // ========================= 
-    // REMOVE 
-    // ========================= 
-    // Intraday weakness will fall back to "MONITOR" rather than forcing a "REMOVE".
-    const isDailyBreakdown = timeframe === "Daily" && (ltp < ema20 || ema20 < ema50 || rsi < 45 || (advancedEnabled && weaknessDetected) || (advancedEnabled && momentumScore < 50)); 
+    // TRADE PLAN
+    const tradePlan = generateTradePlan({ ltp, setup: setupResult.setup });
     
-    if ( belowStopLoss || setupScore < 50 || isDailyBreakdown ) { 
-        verdict = "REMOVE"; 
-        confidence = 25; 
-        setupGrade = "D"; 
-        riskLevel = "HIGH"; 
-        workflowAction = "Remove From Watchlist"; 
-    } 
-    // ========================= 
-    // READY (NEW ENTRY / RUNAWAY) 
-    // ========================= 
-    // Price has crossed the old zone, but the setup is STILL highly valid on the new price.
-    else if ( timeframe === "15 Min" && aboveTriggerZone && strongTrend && setupScore >= 80 && healthyRSI && (!advancedEnabled || (momentumScore >= 60 && !weaknessDetected)) ) { 
-        verdict = "READY"; 
-        confidence = setupScore >= 90 ? 90 : 85; 
-        setupGrade = setupScore >= 90 ? "A+" : "A"; 
-        riskLevel = "LOW"; 
-        workflowAction = "New Entry Calculated"; 
-        requiresNewPlan = true; // Triggers the recalculation
-        badges.push("New Base Formed");
-    } 
-    // ========================= 
-    // READY (ORIGINAL ENTRY ZONE) 
-    // ========================= 
-    // Price is safely inside the original trigger zone.
-    else if ( timeframe === "15 Min" && insideTriggerZone && strongTrend && setupScore >= 80 && healthyRSI && (!advancedEnabled || (momentumScore >= 60 && !weaknessDetected)) ) { 
-        verdict = "READY"; 
-        confidence = setupScore >= 90 ? 90 : 85; 
-        setupGrade = setupScore >= 90 ? "A+" : "A"; 
-        riskLevel = "LOW"; 
-        workflowAction = "Ready For Execution"; 
-    } 
-    // ========================= 
-    // MONITOR 
-    // ========================= 
-    // Catches intraday pullbacks, consolidations, or prices below the trigger low
-    else { 
-        verdict = "MONITOR"; 
-        confidence = setupScore >= 70 ? 70 : 60; 
-        setupGrade = setupScore >= 70 ? "B" : "C"; 
-        riskLevel = "MEDIUM"; 
-        workflowAction = "Continue Watchlist"; 
-    } 
+    // REASONS
+    const reasons = generateNewScanReasons({ verdict: verdictResult.verdict, setup: setupResult.setup, setupScore: setupResult.setupScore, momentumScore: momentumResult.momentumScore, momentumTrend: momentumResult.momentumTrend, participationTrend: momentumResult.participationTrend, relativeVolumeStatus: momentumResult.relativeVolumeStatus, weaknessDetected: momentumResult.weaknessDetected, ltp, ema20, ema50, rsi, advancedEnabled });
     
-    // ========================= 
-    // ADVANCED MOMENTUM BOOST 
-    // ========================= 
-    if ( advancedEnabled && momentumScore >= 80 && verdict === "READY" ) { 
-        confidence = Math.min( 95, confidence + 5 ); 
-        badges.push( "High Conviction" ); 
-    } 
+    return { stockName, mode: "new", timeframe, ...verdictResult, setup: setupResult.setup, setupScore: setupResult.setupScore, cbScore: setupResult.cbPercent, pcScore: setupResult.pcPercent, momentumScore: momentumResult.momentumScore, momentumTrend: momentumResult.momentumTrend, participationTrend: momentumResult.participationTrend, tradePlan, reasons };
+}
+
+// =========================
+// WATCHLIST
+// =========================
+function analyzeWatchlistMode(data) {
+    // Extract previousSetup to pass to the setup engine
+    const { stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup, previousTriggerLow, previousTriggerHigh, previousSL, previousTarget, advancedEnabled = false, candles = [] } = data;
     
-    return { verdict, confidence, setupGrade, riskLevel, workflowAction, requiresNewPlan, badges }; 
+    // SETUP - Passing the locked setup to prevent "Setup Drift"
+    const setupResult = calculateSetupScores({ ltp, ema20, ema50, rsi, timeframe, lockedSetup: previousSetup });
+    
+    // TRADE PLAN - Default to the user's manual inputs
+    // BUG FIX: Changed to 'let' so the auditor can overwrite it
+    let lockedTradePlan = { triggerLow: previousTriggerLow, triggerHigh: previousTriggerHigh, stopLoss: previousSL, target: previousTarget };
+    
+    // MOMENTUM
+    let momentumResult = { readinessScore: 0, readinessStatus: "Not Available", triggerPressure: 0, volumeExpansion: "Not Available", weaknessDetected: false };
+    if ( advancedEnabled && candles.length >= 5 ) {
+        momentumResult = calculateWatchlistMomentum({ candles, ltp, previousTriggerLow, previousTriggerHigh });
+    }
+    
+    // VERDICT
+    const verdictResult = analyzeWatchlist({ timeframe, setup: setupResult.setup, setupScore: setupResult.setupScore, momentumScore: momentumResult.readinessScore, weaknessDetected: momentumResult.weaknessDetected, ltp, ema20, ema50, rsi, previousTriggerLow, previousTriggerHigh, previousSL, advancedEnabled });
+    
+    // =========================
+    // DYNAMIC TRADE PLAN OVERRIDE
+    // =========================
+    // If the setup formed a "New Base" at a higher price, generate and inject a new safe trade plan.
+    if (verdictResult.requiresNewPlan) {
+        lockedTradePlan = generateTradePlan({ ltp, setup: setupResult.setup });
+    }
+
+    // REASONS
+    const reasons = generateWatchlistReasons({ verdict: verdictResult.verdict, setup: setupResult.setup, setupScore: setupResult.setupScore, readinessScore: momentumResult.readinessScore, triggerPressure: momentumResult.triggerPressure, volumeExpansion: momentumResult.volumeExpansion, weaknessDetected: momentumResult.weaknessDetected, ltp, ema20, ema50, rsi, previousTriggerLow, previousTriggerHigh, previousSL, advancedEnabled });
+    
+    return { stockName, mode: "watchlist", timeframe, ...verdictResult, setup: setupResult.setup, setupScore: setupResult.setupScore, cbScore: setupResult.cbPercent, pcScore: setupResult.pcPercent, readinessScore: momentumResult.readinessScore, triggerPressure: momentumResult.triggerPressure, volumeExpansion: momentumResult.volumeExpansion, lockedTradePlan, reasons };
+}
+
+// =========================
+// ACTIVE TRADE
+// =========================
+function analyzeActiveTrade(data) {
+    // Extract previousSetup for reason generation
+    const { previousSetup } = data;
+
+    let momentumResult = { tradeMomentumScore: 0, momentumHealth: "Not Available", participationTrend: "Not Available", weaknessDetected: false, exhaustionDetected: false };
+    
+    if ( data.advancedEnabled && data.candles && data.candles.length >= 5 ) {
+        momentumResult = calculateTradeMomentum({ candles: data.candles });
+    }
+    
+    const tradeResult = manageActiveTrade({ ...data, momentumScore: momentumResult.tradeMomentumScore, weaknessDetected: momentumResult.weaknessDetected });
+    
+    const reasons = generateTradeReasons({ tradeVerdict: tradeResult.tradeVerdict, tradeHealth: tradeResult.tradeHealth, pnlPercent: tradeResult.pnlPercent, momentumHealth: momentumResult.momentumHealth, participationTrend: momentumResult.participationTrend, weaknessDetected: momentumResult.weaknessDetected, exhaustionDetected: momentumResult.exhaustionDetected, setup: previousSetup, ...data });
+    
+    return { ...tradeResult, ...momentumResult, setup: previousSetup, reasons };
 }
