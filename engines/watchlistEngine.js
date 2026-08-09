@@ -45,7 +45,7 @@ function analyzeWatchlist(data) {
         setupGrade = "D"; 
         riskLevel = "HIGH"; 
         workflowAction = "Remove From Watchlist"; 
-    } 
+    }
     // ========================= 
     // READY (NEW ENTRY / RUNAWAY) 
     // ========================= 
@@ -58,7 +58,7 @@ function analyzeWatchlist(data) {
         workflowAction = "New Entry Calculated"; 
         requiresNewPlan = true; // Triggers the recalculation
         badges.push("New Base Formed");
-    } 
+    }
     // ========================= 
     // READY (ORIGINAL ENTRY ZONE) 
     // ========================= 
@@ -69,7 +69,7 @@ function analyzeWatchlist(data) {
         setupGrade = setupScore >= 90 ? "A+" : "A"; 
         riskLevel = "LOW"; 
         workflowAction = "Ready For Execution"; 
-    } 
+    }
     // ========================= 
     // MONITOR 
     // ========================= 
@@ -80,7 +80,7 @@ function analyzeWatchlist(data) {
         setupGrade = setupScore >= 70 ? "B" : "C"; 
         riskLevel = "MEDIUM"; 
         workflowAction = "Continue Watchlist"; 
-    } 
+    }
     
     // ========================= 
     // ADVANCED MOMENTUM BOOST 
@@ -88,7 +88,7 @@ function analyzeWatchlist(data) {
     if ( advancedEnabled && momentumScore >= 80 && verdict === "READY" ) { 
         confidence = Math.min( 95, confidence + 5 ); 
         badges.push( "High Conviction" ); 
-    } 
+    }
     
     return { verdict, confidence, setupGrade, riskLevel, workflowAction, requiresNewPlan, badges }; 
 }
