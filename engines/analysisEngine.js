@@ -40,7 +40,6 @@ function analyzeWatchlistMode(data) {
     const setupResult = calculateSetupScores({ ltp, ema20, ema50, rsi, timeframe, lockedSetup: previousSetup });
     
     // TRADE PLAN - Default to the user's manual inputs
-    // BUG FIX: Changed to 'let' so the auditor can overwrite it
     let lockedTradePlan = { triggerLow: previousTriggerLow, triggerHigh: previousTriggerHigh, stopLoss: previousSL, target: previousTarget };
     
     // MOMENTUM
