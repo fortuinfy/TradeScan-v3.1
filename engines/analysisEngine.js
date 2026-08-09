@@ -1,7 +1,7 @@
 // ========================= 
 // ANALYSIS ENGINE // V2 MASTER ROUTER // TRADESCAN V3.1
 // ========================= 
- 
+
 // ========================= 
 // NEW SCAN 
 // ========================= 
@@ -28,19 +28,19 @@ function analyzeNewScanMode(data) {
     
     return { stockName, mode: "new", timeframe, ...verdictResult, setup: setupResult.setup, setupScore: setupResult.setupScore, cbScore: setupResult.cbPercent, pcScore: setupResult.pcPercent, momentumScore: momentumResult.momentumScore, momentumTrend: momentumResult.momentumTrend, participationTrend: momentumResult.participationTrend, tradePlan, reasons }; 
 } 
- 
+
 // ========================= 
 // WATCHLIST 
 // ========================= 
 function analyzeWatchlistMode(data) { 
-    // BUG FIX: Extract previousSetup to pass to the setup engine
+    // Extract previousSetup to pass to the setup engine
     const { stockName, timeframe, ltp, ema20, ema50, rsi, previousSetup, previousTriggerLow, previousTriggerHigh, previousSL, previousTarget, advancedEnabled = false, candles = [] } = data; 
     
     // SETUP - Passing the locked setup to prevent "Setup Drift"
     const setupResult = calculateSetupScores({ ltp, ema20, ema50, rsi, timeframe, lockedSetup: previousSetup }); 
     
-    // TRADE PLAN
-    const lockedTradePlan = { triggerLow: previousTriggerLow, triggerHigh: previousTriggerHigh, stopLoss: previousSL, target: previousTarget }; 
+    // TRADE PLAN - Default to the user's manual inputs
+    let lockedTradePlan = { triggerLow: previousTriggerLow, triggerHigh: previousTriggerHigh, stopLoss: previousSL, target: previousTarget }; 
     
     // MOMENTUM 
     let momentumResult = { readinessScore: 0, readinessStatus: "Not Available", triggerPressure: 0, volumeExpansion: "Not Available", weaknessDetected: false }; 
@@ -51,19 +51,27 @@ function analyzeWatchlistMode(data) {
     // VERDICT 
     const verdictResult = analyzeWatchlist({ timeframe, setup: setupResult.setup, setupScore: setupResult.setupScore, momentumScore: momentumResult.readinessScore, weaknessDetected: momentumResult.weaknessDetected, ltp, ema20, ema50, rsi, previousTriggerLow, previousTriggerHigh, previousSL, advancedEnabled }); 
     
+    // =========================
+    // BUG FIX: DYNAMIC TRADE PLAN OVERRIDE
+    // =========================
+    // If the setup formed a "New Base" at a higher price, generate and inject a new safe trade plan.
+    if (verdictResult.requiresNewPlan) {
+        lockedTradePlan = generateTradePlan({ ltp, setup: setupResult.setup });
+    }
+
     // REASONS 
     const reasons = generateWatchlistReasons({ verdict: verdictResult.verdict, setup: setupResult.setup, setupScore: setupResult.setupScore, readinessScore: momentumResult.readinessScore, triggerPressure: momentumResult.triggerPressure, volumeExpansion: momentumResult.volumeExpansion, weaknessDetected: momentumResult.weaknessDetected, ltp, ema20, ema50, rsi, previousTriggerLow, previousTriggerHigh, previousSL, advancedEnabled }); 
     
     return { stockName, mode: "watchlist", timeframe, ...verdictResult, setup: setupResult.setup, setupScore: setupResult.setupScore, cbScore: setupResult.cbPercent, pcScore: setupResult.pcPercent, readinessScore: momentumResult.readinessScore, triggerPressure: momentumResult.triggerPressure, volumeExpansion: momentumResult.volumeExpansion, lockedTradePlan, reasons }; 
 } 
- 
+
 // ========================= 
 // ACTIVE TRADE 
 // ========================= 
 function analyzeActiveTrade(data) { 
-    // BUG FIX: Extract previousSetup for reason generation
+    // Extract previousSetup for reason generation
     const { previousSetup } = data;
- 
+
     let momentumResult = { tradeMomentumScore: 0, momentumHealth: "Not Available", participationTrend: "Not Available", weaknessDetected: false, exhaustionDetected: false }; 
     
     if ( data.advancedEnabled && data.candles && data.candles.length >= 5 ) { 
